@@ -28,7 +28,12 @@ inputs:
   subnet-id:
     description: >-
       VPC Subnet Id. The subnet should belong to the same VPC as the specified security group.
-      This input is required if you use the 'start' mode.
+      This input is required if you use the 'start' mode and do not specify the 'vpc-id'. This cannot be used with 'vpc-id'
+    required: false
+  vpc-id:
+    description: >-
+      VPC Id. The VPC should be the same as the specified security group.
+      This input is required if you use the 'start' mode and do not specify the 'subnet-id'. This cannot be used with 'subnet-id'
     required: false
   security-group-id:
     description: >-
