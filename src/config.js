@@ -10,6 +10,7 @@ class Config {
       ec2ImageId: core.getInput('ec2-image-id'),
       ec2InstanceType: core.getInput('ec2-instance-type'),
       subnetId: core.getInput('subnet-id'),
+      vpcId: core.getInput('vpc-id'),
       securityGroupId: core.getInput('security-group-id'),
       label: core.getInput('label'),
       ec2InstanceId: core.getInput('ec2-instance-id'),
@@ -45,10 +46,14 @@ class Config {
       throw new Error(`The 'github-token' input is not specified`);
     }
 
+    if (this.input.subnetId && this.input.vpcId) {
+      throw new Error(`Invalid input. You cannot specify both 'subnet-id' and 'vpc-id'`);
+    }
+
     if (this.input.mode === 'start') {
       const isSet = param => param;
-      const params = [this.input.ec2ImageId, this.input.ec2InstanceType, this.input.subnetId, this.input.securityGroupId];
-      if (!(this.input.ec2LaunchTemplate || params.every(isSet))) {
+      const params = [this.input.ec2ImageId, this.input.ec2InstanceType, this.input.securityGroupId];
+      if (!(this.input.ec2LaunchTemplate || (params.every(isSet) && (this.input.vpcId || this.input.subnetId)))) {
         throw new Error(`Not all the required inputs are provided for the 'start' mode`);
       }
     } else if (this.input.mode === 'stop') {

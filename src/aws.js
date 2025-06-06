@@ -32,6 +32,18 @@ function buildUserDataScript(githubRegistrationToken, label, config) {
   }
 }
 
+async function runEc2Instance(ec2, params) {  
+  try {
+    const result = await ec2.runInstances(params).promise();
+    const ec2InstanceId = result.Instances[0].InstanceId;
+    core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
+    return ec2InstanceId;
+  } catch (error) {
+    core.error('AWS EC2 instance starting error');
+    throw error;
+  }
+}
+
 async function startEc2Instance(label, githubRegistrationToken, config) {
   const ec2 = new AWS.EC2();
 
@@ -55,15 +67,38 @@ async function startEc2Instance(label, githubRegistrationToken, config) {
     };
   }
 
-  try {
-    const result = await ec2.runInstances(params).promise();
-    const ec2InstanceId = result.Instances[0].InstanceId;
-    core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
-    return ec2InstanceId;
-  } catch (error) {
-    core.error('AWS EC2 instance starting error');
-    throw error;
+  const vpcId = config.input.vpcId;
+
+  if (!vpcId) {
+    return await runEc2Instance(ec2, params);
   }
+
+  const filters = {
+    Filters: [
+      {
+        Name: "vpc-id",
+        Values: [vpcId]
+      }
+    ]
+  };
+ 
+  const subnets = (await ec2.describeSubnets(filters).promise()).Subnets.map(s => s.SubnetId)
+
+  if (subnets.length == 0) {
+    throw new Error('Did not find any subnets in the provided VPC');
+  }
+  
+  for (const subnetId of subnets) {
+    params.SubnetId = subnetId;
+    try {
+      return await runEc2Instance(ec2, params);
+    } catch (error) {	
+      core.error(error);
+      core.error('Retrying with next subnet...');
+    }
+  }
+
+  throw new Error("Instance failed to launch in all subnets");
 }
 
 async function terminateEc2Instance(ec2InstanceId) {
