@@ -70,8 +70,11 @@ async function startEc2Instance(label, githubRegistrationToken, config) {
   const vpcId = config.input.vpcId;
 
   if (!vpcId) {
+    core.info(`No vpc-id provided, using subnet`);
     return await runEc2Instance(ec2, params);
   }
+
+  core.info(`Attempting to launch EC2 instance in ${vpcId}`);
 
   const filters = {
     Filters: [
@@ -83,7 +86,7 @@ async function startEc2Instance(label, githubRegistrationToken, config) {
   };
  
   const subnets = (await ec2.describeSubnets(filters).promise()).Subnets.map(s => s.SubnetId)
-
+  core.info(`Using subnets: ${subnets}.`);
   if (subnets.length == 0) {
     throw new Error('Did not find any subnets in the provided VPC');
   }
